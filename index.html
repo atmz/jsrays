@@ -1,0 +1,99 @@
+<html>
+<head>
+<title>JS Raytrace</title>
+<script src="raytrace.js"></script>
+
+</head>
+<body>
+
+<canvas id="canvas1" width="800", height="600"></canvas>
+<script>
+
+var grey = new Color(100,100,100);
+var white = new Color(255,255,255);
+var red = new Color(255,0,0);
+var green = new Color(0,255,0);
+var blue = new Color(0,0,255);
+var black = new Color(0,0,0);
+var ground = new Color(100,200,50);
+var yellow = new Color(255,255,0);
+
+var sonly=new Material(0,0,100);
+var donly=new Material(0,0.1,0);
+var metal=new Material(0.2,0.5,10);
+var dirt=new Material(0.1,1,0);
+var sky=new Material(1,0,0);
+
+var scene = new Scene(new Point(0, 0, 0), new Point(0, -.1, -1));
+
+
+scene.addLight( new Light(new Point(30, 30, -34), white, logFalloffIntensity(2)));
+scene.addLight( new Light(new Point(-30, 30, -34), white, logFalloffIntensity(4)));
+//scene.addLight( new Light(new Point(0, 0, -100), white,noFalloffIntensity(2)));
+//scene.addLight( new Light(new Point(0, 10, -30), blue,linearFalloffIntensity(2)));
+//scene.addLight( new Light(new Point(5, 200, -40), white,noFalloffIntensity(1)));
+//scene.addLight( new Light(new Point(-10, 400, -20), red,noFalloffIntensity(1)));
+/*
+scene.addObject(new Sphere(new Point(-6, 2, -100), 1, yellow, dirt));
+scene.addObject(new Sphere(new Point(2, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(4, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(-2, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(-4, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(0, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(-6, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(6, 0, -40), 1, white, sonly));
+scene.addObject(new Sphere(new Point(-8, 0, -40), 1, white, metal));
+scene.addObject(new Sphere(new Point(8, 0, -40), 1, red, metal));
+scene.addObject(new Sphere(new Point(-2, 3, -20), .2, grey, metal));
+scene.addObject(new Sphere(new Point(-2, -3, -22), .2, blue, metal));*/
+
+//pool table
+
+scene.addObject(new Sphere(new Point(4, -8, -44), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(-4, -8, -44), 2, red, metal));
+scene.addObject(new Sphere(new Point(0, -8, -44), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(-8, -8, -44), 2, red, metal));
+scene.addObject(new Sphere(new Point(8, -8, -44), 2, yellow, metal));
+
+scene.addObject(new Sphere(new Point(-2, -8, -42), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(2, -8, -42), 2, black, metal));
+scene.addObject(new Sphere(new Point(-6, -8, -42), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(6, -8, -42), 2, red, metal));
+
+scene.addObject(new Sphere(new Point(4, -8, -40), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(-4, -8, -40), 2, red, metal));
+scene.addObject(new Sphere(new Point(0, -8, -40), 2, yellow, metal));
+
+scene.addObject(new Sphere(new Point(-2, -8, -38), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(2, -8, -38), 2, red, metal));
+
+scene.addObject(new Sphere(new Point(0, -8, -36), 2, red, metal));
+
+//scene.addObject(new Plane(new Point(2, -30, -5), new Point(-1, -1, -1), grey));
+scene.addObject(new Plane(new Point(0, 0, -500), new Point(0, 0, -1), blue, sky));
+
+scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, -1, 0), green, dirt));
+
+console.log(scene.toString());
+
+var element = document.getElementById("canvas1");
+var c = element.getContext("2d");
+
+// read the width and height of the canvas
+var width = element.width;
+var height = element.height;
+
+// create a new batch of pixels with the same
+// dimensions as the image:
+var imageData = c.createImageData(width, height);
+
+rayTrace(scene, imageData);
+
+// copy the image data back onto the canvas
+c.putImageData(imageData, 0, 0); // at coords 0,0
+
+			
+	</script>
+	
+</body>
+</html>

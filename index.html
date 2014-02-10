@@ -18,17 +18,19 @@ var black = new Color(0,0,0);
 var ground = new Color(100,200,50);
 var yellow = new Color(255,255,0);
 
-var sonly=new Material(0,0,100);
-var donly=new Material(0,0.1,0);
-var metal=new Material(0.2,0.5,10);
-var dirt=new Material(0.1,1,0);
-var sky=new Material(1,0,0);
+var sonly=new Material(0,0,10000000000000000, 200);
+var donly=new Material(0,0.1,0,1);
+var metal=new Material(0.2,0.3,100, 20);
+var smetal=new Material(0.2,0.3,1000000000000000000, 220);
+var dirt=new Material(0.1,.2,0,1);
+var sky=new Material(1,0,0,1);
+var glass=new Material(0.2,0.3,100, 20, 1.3, .8);
+var dglass=new Material(0.2,0.3,100, 20, 1.2, .5);
+var glassa=new Material(1,0,0, 1, 1.3, .9);
 
-var scene = new Scene(new Point(0, 0, 0), new Point(0, -.1, -1));
+var scene = new Scene(new Point(0, 15, -15), new Point(0, -1, -1));
 
 
-scene.addLight( new Light(new Point(30, 30, -34), white, logFalloffIntensity(2)));
-scene.addLight( new Light(new Point(-30, 30, -34), white, logFalloffIntensity(4)));
 //scene.addLight( new Light(new Point(0, 0, -100), white,noFalloffIntensity(2)));
 //scene.addLight( new Light(new Point(0, 10, -30), blue,linearFalloffIntensity(2)));
 //scene.addLight( new Light(new Point(5, 200, -40), white,noFalloffIntensity(1)));
@@ -46,9 +48,10 @@ scene.addObject(new Sphere(new Point(-8, 0, -40), 1, white, metal));
 scene.addObject(new Sphere(new Point(8, 0, -40), 1, red, metal));
 scene.addObject(new Sphere(new Point(-2, 3, -20), .2, grey, metal));
 scene.addObject(new Sphere(new Point(-2, -3, -22), .2, blue, metal));*/
-
+/*
 //pool table
-
+scene.addLight( new Light(new Point(300, 300, -34), white, noFalloffIntensity(1)));
+scene.addLight( new Light(new Point(-300, 300, -34), white, noFalloffIntensity(1)));
 scene.addObject(new Sphere(new Point(4, -8, -44), 2, yellow, metal));
 scene.addObject(new Sphere(new Point(-4, -8, -44), 2, red, metal));
 scene.addObject(new Sphere(new Point(0, -8, -44), 2, yellow, metal));
@@ -68,11 +71,55 @@ scene.addObject(new Sphere(new Point(-2, -8, -38), 2, yellow, metal));
 scene.addObject(new Sphere(new Point(2, -8, -38), 2, red, metal));
 
 scene.addObject(new Sphere(new Point(0, -8, -36), 2, red, metal));
+scene.addObject(new Plane(new Point(0, 0, -500), new Point(0, 0, 1), blue, sky));
+scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, 1, 0), green, dirt));
+*/
 
+scene.addLight( new Light(new Point(300, 300, -34), white, noFalloffIntensity(1)));
+scene.addLight( new Light(new Point(-300, 300, -34), white, noFalloffIntensity(1)));
+scene.addObject(new Sphere(new Point(4, -8, -44), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(-4, -8, -44), 2, red, metal));
+scene.addObject(new Sphere(new Point(0, -8, -44), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(-8, -8, -44), 2, red, metal));
+scene.addObject(new Sphere(new Point(8, -8, -44), 2, grey, dglass));
+
+scene.addObject(new Sphere(new Point(-2, -8, -42), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(2, -8, -42), 2, black, smetal));
+scene.addObject(new Sphere(new Point(-6, -8, -42), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(6, -8, -42), 2, red, metal));
+
+scene.addObject(new Sphere(new Point(4, -8, -40), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(-4, -8, -40), 2, red, metal));
+scene.addObject(new Sphere(new Point(0, -8, -40), 2, grey, dglass));
+
+scene.addObject(new Sphere(new Point(-2, -8, -38), 2, grey, dglass));
+scene.addObject(new Sphere(new Point(2, -8, -38), 2, red, metal));
+
+scene.addObject(new Sphere(new Point(0, -8, -36), 2, red, metal));
+
+scene.addObject(new Plane(new Point(0, 0, -500), new Point(0, 0, 1), blue, sky));
+scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, 1, 0), green, dirt));
+/*
+scene.addObject(new Sphere(new Point(-2, -2, -30), 2, blue, glass));
+scene.addObject(new Sphere(new Point(2, -4, -30), 2, grey, glass));
+scene.addObject(new Sphere(new Point(2, -4, -20), 2, grey, glass));
+scene.addObject(new Sphere(new Point(2, -4, -40), 2, grey, glass));
+scene.addObject(new Sphere(new Point(2, -4, -50), 2, grey, glass));
+scene.addObject(new Sphere(new Point(2, -4, -60), 2, grey, glass));*/
 //scene.addObject(new Plane(new Point(2, -30, -5), new Point(-1, -1, -1), grey));
-scene.addObject(new Plane(new Point(0, 0, -500), new Point(0, 0, -1), blue, sky));
 
-scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, -1, 0), green, dirt));
+/*scene.addLight( new Light(new Point(30, 30, -30), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(10, 0, -10), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(-10, 0, -100), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(30, 30, -100), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(-30, 30, -20), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(-30, 0, 0), white, logFalloffIntensity(1)));
+scene.addLight( new Light(new Point(30, 0, -10), white, logFalloffIntensity(1)));
+
+//scene.addObject(new Sphere(new Point(-2, -2, -20), 4, blue, glass));
+//scene.addObject(new Sphere(new Point(-2, -8, -36), 10, white, glass));
+scene.addObject(new Sphere(new Point(1, 0, -25), 4, red, metal));
+scene.addObject(new Sphere(new Point(0, 1, -20), 4, white, glass));*/
 
 console.log(scene.toString());
 

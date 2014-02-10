@@ -1,8 +1,15 @@
-function Material(ka, kd, ks)
+function Material(ka, kd, ks, ds, ri, rf)
 {
 	this.ka=ka;
 	this.kd=kd;
 	this.ks=ks;
+	this.ds=ds;
+	this.ri=1;
+	this.rf=0;
+	if(ri!=undefined)
+		this.ri=ri;
+	if(rf!=undefined)
+		this.rf=rf;
 }
 
 function Point(x,y,z){
@@ -66,8 +73,8 @@ function Sphere(position, radius, color, material){
 	this.material=material; 
 } 
 Sphere.prototype.normal=function(intersection){ 
-	//return intersection.subtract(this.position).normalize();
-	return this.position.subtract(intersection).normalize();
+	return intersection.subtract(this.position).normalize();
+	//return this.position.subtract(intersection).normalize();
 } 
 Sphere.prototype.intersect=function(origin, ray){ 
 	// d = (-(ray . (origin-position)) +- squrt((ray.(origin-position))^2 - ray^2((origin-position-c)^2)-radius^2))
@@ -93,6 +100,7 @@ Sphere.prototype.intersect=function(origin, ray){
 	sqrt = Math.sqrt(sqrt);
 	if((-b - sqrt)/2 < 0)
 	{
+		//return Infinity; // don't hit internal surfaces
 		return (-b + sqrt)/2;
 	}
 	else
@@ -117,7 +125,8 @@ Color.prototype.add=function(that){
 } 
 
 Color.prototype.scale=function(f){ 
-	return new Color(this.r*f, this.g*f, this.b*f);
+	var temp = this.sanitize();
+	return new Color(temp.r*f, temp.g*f, temp.b*f).sanitize();
 } 
 
 
@@ -127,6 +136,10 @@ Color.prototype.cross=function(that){
 
 Color.prototype.mix=function(that){ 
 	return new Color(Math.min(this.r,that.r), Math.min(this.g,that.g), Math.min(this.b,that.b));
+} 
+
+Color.prototype.sanitize=function(){ 
+	return new Color(Math.min(255,this.r), Math.min(255,this.g), Math.min(255,this.b));
 } 
 
 
@@ -209,14 +222,47 @@ function setPixel(imageData, pixel) {
     imageData.data[index+2] = pixel.color.b;
     imageData.data[index+3] = pixel.color.a;
 }
-function castRay(ray, scene)
+
+function reflect(ri, ray, normal)
 {
+	var r = ri;
+	var c = - ray.dot(normal)
+	if(c<0) //in this case we are leaving the object
+	{
+		r = 1/ri;
+		c = - ray.dot(normal.scale(-1));
+	}
+	var newRay = ray.add(normal.scale(2*c));
+	return newRay.normalize();
+}
+function refract(ri, ray, normal)
+{
+	var r = ri;
+	var c = - ray.dot(normal)
+	if(c<0) //in this case we are leaving the object
+	{
+		r = 1/ri;
+		c = - ray.dot(normal.scale(-1));
+	}
+	if(1 - r*r*(1-c*c) < 0) return undefined;
+	var ncoeff = Math.abs(r*c) - Math.sqrt(1 - r*r*(1-c*c));/*
+	console.log(1 - r*r*(1-c*c));
+	console.log(Math.sqrt(1 - r*r*(1-c*c)));
+	console.log(r*c);*/
+	var newRay = ray.scale(r).add(normal.scale(ncoeff));
+	return newRay.normalize();
+}
+
+
+function castRay(origin, ray, scene)
+{
+	var e = 1e-10;
 	var minD = Infinity;
 	var closest = undefined;
 	for(i in scene.objects)
 	{
-		var d = scene.objects[i].intersect(scene.cameraPosition, ray);
-		if(d<minD) { 
+		var d = scene.objects[i].intersect(origin, ray);
+		if(d<minD && d>e) { 
 			minD = d;
 			closest = scene.objects[i]; 
 		}
@@ -225,56 +271,75 @@ function castRay(ray, scene)
 	if(minD<Infinity && closest != undefined)
 	{    
 		//console.log(closest);
-		var point = ray.scale(minD).add(scene.cameraPosition);
+		var point = ray.scale(minD).add(origin);
 		var material = closest.material;
+		var normal = closest.normal(point);
 		//ambient
-		color = closest.color(point).scale(material.ka);
+		if(normal.dot(ray)<0)
+		{
+			color = closest.color(point).scale(material.ka);
+		}
 		
 		for(l in scene.lights)
 		{
 			var light = scene.lights[l];
-			var toL = point.subtract(light.position);
+			var toL = light.position.subtract(point);
 			var toLn = toL.normalize()
 			//check if shadowed
 			var minD = toL.length();
 			var shadowed = false;
-			/*for(i in scene.objects)
+			for(i in scene.objects)
 			{
 				if(i!=closest)
 				{
 					var d = scene.objects[i].intersect(point, toLn);
-					if(d<minD && d<0) { 
+					if(d<minD && d>e) { 
 						minD = d;
 						shadowed = true;
 						break;
 					}
 				}
-			}*/
+			}
 			if(!shadowed)
 			{
 				var intensity = light.intensity(toL.length());
-				var normal = closest.normal(point);
 				/*
 				console.log("minD: "+minD);
 				console.log("ray: "+ray);
 				console.log("point: "+point);
 				console.log("normal: "+ normal);*/
+				if(normal.dot(ray)<0) //don't get any color from internal surface (for now)
+				{
+					//diffuse
+					var diffuse = material.kd * Math.max(normal.dot(toLn), 0) * intensity;
+					//this does cool weird stuffcolor = color.add(closest.color(point).scale(diffuse).cross(light.color));
+					color = color.add(closest.color(point).mix(light.color).scale(diffuse));
+					//color = color.add(diffuse);
+					//color = color.add(diffuse).scale(50000/(toL.dot(toL)));
 		
-				//diffuse
-				var diffuse = material.kd * Math.max(normal.dot(toLn), 0) * intensity;
-				//this does cool weird stuffcolor = color.add(closest.color(point).scale(diffuse).cross(light.color));
-				color = color.add(closest.color(point).mix(light.color).scale(diffuse));
-				//color = color.add(diffuse);
-				//color = color.add(diffuse).scale(50000/(toL.dot(toL)));
-		
-				//specular
-				//Ks * (N dot ( L + V / 2))^n
-				var n=10;
-				var spec = material.ks * Math.pow(toLn.add(ray).scale(0.5).dot(normal), n) * intensity;
-				color = color.add(light.color.scale(spec));
+					//specular
+					//Ks * (N dot ( L + V / 2))^n
+					var n=material.ds;
+					var spec = material.ks * Math.pow(toLn.subtract(ray).scale(0.5).dot(normal), n) * intensity;
+					color = color.add(light.color.scale(spec));
+				}
 			}
 		}
-		
+	}
+	if(closest!=undefined && closest.material.rf>0 )
+	{
+		color=color.scale(1-closest.material.rf);
+		var nextRay=refract(closest.material.ri, ray, normal);
+		if(nextRay==undefined) //total reflection
+		{
+			 nextRay=reflect(closest.material.ri, ray, normal);
+		}
+		else{
+		var nextOrigin=point.add(ray.scale(e)); //adding e to ray to prevent hitting the same spot due to floats
+		var nextColor = castRay(nextOrigin, nextRay, scene);
+		color=color.add(nextColor.scale(closest.material.rf));
+	}
+
 	}
 	return color;
 }
@@ -295,7 +360,7 @@ function rayTrace(scene, imageData)
 		{
 			var y = fovy * (2*v - height) / height;
 			var ray = (new Point(x,y,0)).add(scene.cameraDirection).normalize();
-			var color = castRay(ray, scene);
+			var color = castRay(scene.cameraPosition, ray, scene);
 			var pixel = new Pixel(u,v,color);
 			setPixel(imageData,pixel);
 		}

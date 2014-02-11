@@ -46,7 +46,7 @@ Point.prototype.length=function()
 function Plane(position, normal, color, material){
 	this.position = position;
 	this.normalValue = normal.normalize(); 
-	this.color = function(point){return color;};
+	this.color = color;
 	this.material=material; 
 } 
 Plane.prototype.normal=function(intersection){ 

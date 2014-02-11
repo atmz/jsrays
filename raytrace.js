@@ -237,7 +237,7 @@ function reflect(ri, ray, normal)
 }
 function refract(ri, ray, normal)
 {
-	var r = ri;
+	var r = 1/ri;
 	var c = - ray.dot(normal)
 	if(c<0) //in this case we are leaving the object
 	{
@@ -334,11 +334,9 @@ function castRay(origin, ray, scene)
 		{
 			 nextRay=reflect(closest.material.ri, ray, normal);
 		}
-		else{
-		var nextOrigin=point.add(ray.scale(e)); //adding e to ray to prevent hitting the same spot due to floats
+		var nextOrigin=point.add(nextRay.scale(e)); //adding e to ray to prevent hitting the same spot due to floats
 		var nextColor = castRay(nextOrigin, nextRay, scene);
 		color=color.add(nextColor.scale(closest.material.rf));
-	}
 
 	}
 	return color;
@@ -350,7 +348,7 @@ function rayTrace(scene, imageData)
 	var width = imageData.width;
 	var height = imageData.height;
 	var ratio = height/width;
-	var fovx = 60
+	var fovx = .4	
 	fovx = Math.tan(fovx);
 	var fovy = fovx * ratio;	
 	for(var u = 0; u < width; u++)

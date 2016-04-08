@@ -1,4 +1,4 @@
-function Material(ka, kd, ks, ds, ri, rf)
+function Material(ka, kd, ks, ds, ri, rf, mirror)
 {
 	this.ka=ka;
 	this.kd=kd;
@@ -10,6 +10,8 @@ function Material(ka, kd, ks, ds, ri, rf)
 		this.ri=ri;
 	if(rf!=undefined)
 		this.rf=rf;
+	if(mirror!=undefined)
+		this.mirror=mirror;
 }
 
 function Point(x,y,z){
@@ -58,7 +60,8 @@ Plane.prototype.intersect=function(origin, ray){
 	var denominator = this.normalValue.dot(ray);
 	if(denominator == 0) return Infinity;
 	var d = numerator/denominator;
-	if(d<0) return Infinity;
+	if(d<=0) return Infinity;
+	//console.log(d);
 	return d;
 } 
 Plane.prototype.toString=function(){ 
@@ -170,6 +173,13 @@ function linearFalloffIntensity(intensity)
 		return intensity/distance;
 	};
 }
+function quadraticFalloffIntensity(intensity)
+{
+	return function(distance)
+	{
+		return intensity/Math.pow(distance,2);
+	};
+}
 
 function Light(position, color, intensity)
 {
@@ -223,13 +233,11 @@ function setPixel(imageData, pixel) {
     imageData.data[index+3] = pixel.color.a;
 }
 
-function reflect(ri, ray, normal)
+function reflect(ray, normal)
 {
-	var r = ri;
 	var c = - ray.dot(normal)
 	if(c<0) //in this case we are leaving the object
 	{
-		r = 1/ri;
 		c = - ray.dot(normal.scale(-1));
 	}
 	var newRay = ray.add(normal.scale(2*c));
@@ -237,13 +245,14 @@ function reflect(ri, ray, normal)
 }
 function refract(ri, ray, normal)
 {
-	var r = 1/ri;
+	var r = ri;
 	var c = - ray.dot(normal)
 	if(c<0) //in this case we are leaving the object
 	{
-		r = 1/ri;
+		r = 1/r;
 		c = - ray.dot(normal.scale(-1));
 	}
+	//return undefined;
 	if(1 - r*r*(1-c*c) < 0) return undefined;
 	var ncoeff = Math.abs(r*c) - Math.sqrt(1 - r*r*(1-c*c));/*
 	console.log(1 - r*r*(1-c*c));
@@ -254,8 +263,11 @@ function refract(ri, ray, normal)
 }
 
 
-function castRay(origin, ray, scene)
+function castRay(origin, ray, scene, ttl)
 {
+	if(ttl<=0) {
+		return new Color(0,0,0);
+	}
 	var e = 1e-10;
 	var minD = Infinity;
 	var closest = undefined;
@@ -287,20 +299,20 @@ function castRay(origin, ray, scene)
 			var toLn = toL.normalize()
 			//check if shadowed
 			var minD = toL.length();
-			var shadowed = false;
+			var lightPercent = 1;
 			for(i in scene.objects)
 			{
-				if(i!=closest)
-				{
-					var d = scene.objects[i].intersect(point, toLn);
-					if(d<minD && d>e) { 
-						minD = d;
-						shadowed = true;
+				var d = scene.objects[i].intersect(point, toLn);
+				if(d<minD && d>e) { 
+					minD = d;
+					lightPercent = lightPercent * (scene.objects[i].material.rf);
+					if(lightPercent<=0)
+					{
 						break;
 					}
 				}
 			}
-			if(!shadowed)
+			if(lightPercent>0.0)
 			{
 				var intensity = light.intensity(toL.length());
 				/*
@@ -311,7 +323,7 @@ function castRay(origin, ray, scene)
 				if(normal.dot(ray)<0) //don't get any color from internal surface (for now)
 				{
 					//diffuse
-					var diffuse = material.kd * Math.max(normal.dot(toLn), 0) * intensity;
+					var diffuse = material.kd * Math.max(normal.dot(toLn), 0) * intensity * lightPercent;
 					//this does cool weird stuffcolor = color.add(closest.color(point).scale(diffuse).cross(light.color));
 					color = color.add(closest.color(point).mix(light.color).scale(diffuse));
 					//color = color.add(diffuse);
@@ -320,7 +332,7 @@ function castRay(origin, ray, scene)
 					//specular
 					//Ks * (N dot ( L + V / 2))^n
 					var n=material.ds;
-					var spec = material.ks * Math.pow(toLn.subtract(ray).scale(0.5).dot(normal), n) * intensity;
+					var spec = material.ks * Math.pow(toLn.subtract(ray).scale(0.5).dot(normal), n) * intensity * lightPercent;
 					color = color.add(light.color.scale(spec));
 				}
 			}
@@ -332,18 +344,45 @@ function castRay(origin, ray, scene)
 		var nextRay=refract(closest.material.ri, ray, normal);
 		if(nextRay==undefined) //total reflection
 		{
-			 nextRay=reflect(closest.material.ri, ray, normal);
+			 nextRay=reflect(ray, normal);
 		}
 		var nextOrigin=point.add(nextRay.scale(e)); //adding e to ray to prevent hitting the same spot due to floats
-		var nextColor = castRay(nextOrigin, nextRay, scene);
+		var nextColor = castRay(nextOrigin, nextRay, scene, ttl-1);
 		color=color.add(nextColor.scale(closest.material.rf));
+
+	}
+	if(closest!=undefined && closest.material.mirror>0 )
+	{
+		color=color.scale(1-closest.material.mirror);
+		var nextRay=reflect(ray, normal);
+		var nextOrigin=point.add(nextRay.scale(e)); //adding e to ray to prevent hitting the same spot due to floats
+		var nextColor = castRay(nextOrigin, nextRay, scene, ttl-1);
+		color=color.add(nextColor.scale(closest.material.mirror));
 
 	}
 	return color;
 }
 
+function doTrace(element, ttl) {
+	start = new Date().getTime();
+	var c = element.getContext("2d");
 
-function rayTrace(scene, imageData)
+	// read the width and height of the canvas
+	var width = element.width;
+	var height = element.height;
+
+	// create a new batch of pixels with the same
+	// dimensions as the image:
+	var imageData = c.createImageData(width, height);
+
+	rayTrace(scene, imageData, ttl, 0);
+
+	// copy the image data back onto the canvas
+	c.putImageData(imageData, 0, 0); // at coords 0,0
+	return new Date().getTime() - start;
+}
+
+function rayTrace(scene, imageData, ttl, ss)
 {
 	var width = imageData.width;
 	var height = imageData.height;
@@ -358,7 +397,7 @@ function rayTrace(scene, imageData)
 		{
 			var y = fovy * (2*v - height) / height;
 			var ray = (new Point(x,y,0)).add(scene.cameraDirection).normalize();
-			var color = castRay(scene.cameraPosition, ray, scene);
+			var color = castRay(scene.cameraPosition, ray, scene, ttl);
 			var pixel = new Pixel(u,v,color);
 			setPixel(imageData,pixel);
 		}

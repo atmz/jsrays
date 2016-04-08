@@ -5,13 +5,34 @@
 
 </head>
 <body>
-
-<canvas id="canvas1" width="600", height="400"></canvas>
+<center>
+<canvas id="canvas1" ></canvas>
+<br>
+w: <input type="text" id='view-port-width' value='600'>
+h: <input type="text" id='view-port-height' value='400'>
+max depth: <input type="text" id='max-depth' value='4'>
+<button onclick="buttonClick()">Click me</button>
+<br>
+<button onclick="transformSpheres(glass)">Glassify</button>
+<button onclick="transformSpheres(metal)">Metallize</button>
+<button onclick="transformSpheres(dirt)">Dirty</button>
+<button onclick="transformSpheres(metalmirror)">Mirrorize</button>
+<button onclick="whiten()">Whitewash</button>
+<button onclick="greyen()">Greying</button>
+<br> Lights:
+1: <input type="text" id='light-1-intensity' value='0'>
+2: <input type="text" id='light-2-intensity' value='50'>
+3: <input type="text" id='light-3-intensity' value='0'>
+4: <input type="text" id='light-4-intensity' value='20'>
+<br>
+<div id='time-taken'>xx ms</div>
+</center>
 <script>
 
 var grey = new Color(100,100,100);
 var white = new Color(255,255,255);
 var red = new Color(255,0,0);
+var orange = new Color(255,127,0);
 var green = new Color(0,255,0);
 var blue = new Color(0,0,255);
 var black = new Color(0,0,0);
@@ -19,19 +40,39 @@ var ground = new Color(100,200,50);
 var yellow = new Color(255,255,0);
 
 var sonly=new Material(0,0,10000000000000000, 200);
-var donly=new Material(0,0.1,0,1);
-var metal=new Material(0.2,0.3,100, 20);
+var s100 =new Material(0,0,100, 200);
+var s10 =new Material(0,0,10, 200);
+var s1 =new Material(0,0,1, 200);
+var s01 =new Material(0,0,0.1, 200);
+var donly=new Material(0,0.3,0,1);
+var metal=new Material(0.2,0.3,.8, 20);
 var smetal=new Material(0.2,0.3,1000000000000000000, 220);
 var dirt=new Material(0.1,.2,0,1);
 var sky=new Material(1,0,0,1);
-var glass=new Material(0.2,0.3,100, 20, 1.2, .8);
+var glass=new Material(0.2,0.3,100, 20, 1.4, .8);
 var dglass=new Material(0.2,0.3,100, 20, 1.3, .5);
 var glassa=new Material(1,0,0, 1, 1.3, .9);
+var mirror=new Material(0.2,0.3,100, 20, 1.2, .8, 1);
+var metalmirror=new Material(0.2,0.3,100, 20, 1, 0, .7);
 
 
+var colorFn = function(color){
+	return function(point) {return color;};
+}
 var checkers = function(point){
-		if(Math.abs(Math.floor(point.z/2)) % 2 ==  Math.abs(Math.floor(point.x/2)) % 2  ) {return white;}
-		return black;};
+	var e = 1e-10;
+	var xmod2 = (Math.abs(Math.floor(point.x/2+e)) % 2 == 1);
+	var ymod2 = (Math.abs(Math.floor(point.y/2+e)) % 2 == 1);
+	var zmod2 = (Math.abs(Math.floor(point.z/2+e)) % 2 == 1);
+	xorxy =  ( xmod2 || ymod2 ) && !( xmod2 && ymod2 );
+	xorxyxorz =  ( xorxy || zmod2 ) && !( xorxy && zmod2 );
+	if(xorxyxorz) {
+		return white;
+	} else {
+		return black;
+	}
+};	
+
 
 var skyStripes= function(point){
 		if(Math.abs(Math.floor(point.x/40)) % 2  ) {return green;}
@@ -67,15 +108,17 @@ scene.addObject(new Sphere(new Point(-2, -3, -22), .2, blue, metal));*/
 //pool table
 var scene = new Scene(new Point(0, 0, 0), new Point(0, -.1, -1));
 
-scene.addLight( new Light(new Point(20, -10, -34), blue, linearFalloffIntensity(3)));
 
-scene.addLight( new Light(new Point(300, 300, -34), white, noFalloffIntensity(1.5)));
-scene.addLight( new Light(new Point(-300, 300, -34), white, noFalloffIntensity(0.5)));
+scene.addLight( new Light(new Point(10, 30, 0), white, logFalloffIntensity(4.5)));
+scene.addLight( new Light(new Point(0, 50, -200), white, logFalloffIntensity(10.5)));
+scene.addLight( new Light(new Point(-300, 300, -74), white, logFalloffIntensity(5.5)));
+scene.addLight( new Light(new Point(20, -9, -34), orange, logFalloffIntensity(3)));
+
 scene.addObject(new Sphere(new Point(4, -8, -44), 2, yellow, metal));
 scene.addObject(new Sphere(new Point(-4, -8, -44), 2, red, metal));
 scene.addObject(new Sphere(new Point(0, -8, -44), 2, yellow, metal));
-scene.addObject(new Sphere(new Point(-8, -8, -44), 2, red, metal));
-scene.addObject(new Sphere(new Point(8, -8, -44), 2, yellow, metal));
+scene.addObject(new Sphere(new Point(-8, -8, -44), 2, red, donly));
+scene.addObject(new Sphere(new Point(8, -8, -44), 2, yellow, donly));
 
 scene.addObject(new Sphere(new Point(-2, -8, -42), 2, yellow, metal));
 scene.addObject(new Sphere(new Point(2, -8, -42), 2, black, metal));
@@ -86,15 +129,16 @@ scene.addObject(new Sphere(new Point(4, -8, -40), 2, yellow, metal));
 scene.addObject(new Sphere(new Point(-4, -8, -40), 2, red, metal));
 scene.addObject(new Sphere(new Point(0, -8, -40), 2, yellow, metal));
 
-scene.addObject(new Sphere(new Point(-2, -8, -38), 2, yellow, metal));
-scene.addObject(new Sphere(new Point(2, -8, -38), 2, red, metal));
+scene.addObject(new Sphere(new Point(-2, -8, -38), 2, yellow, glass));
+scene.addObject(new Sphere(new Point(2, -8, -38), 2, red, glass));
 
 scene.addObject(new Sphere(new Point(0, -8, -36), 2, red, metal));
-scene.addObject(new Plane(new Point(0, 0, -500), new Point(0, 0, 1), skyGradient, sky));
-scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, 1, 0), checkers, metal));
+scene.addObject(new Plane(new Point(0, 0, -250), new Point(0, 0, 1), skyGradient, sky));
+scene.addObject(new Plane(new Point(0, -10, -10), new Point(0, 1, 0), checkers, dirt));
 
-scene.addObject(new Sphere(new Point(-2, 4, -50), 6, red, dglass));
-scene.addObject(new Sphere(new Point(5, 3, -40), 4, grey, glass));
+scene.addObject(new Sphere(new Point(-2, 4, -50), 6, red, metalmirror));
+scene.addObject(new Sphere(new Point(6, 0, -45), 3, grey, glass));
+//scene.addObject(new Sphere(new Point(2, -8, -30), 2, grey, glass));
 
 /*
 scene.addLight( new Light(new Point(300, 300, -34), white, noFalloffIntensity(1)));
@@ -145,22 +189,55 @@ scene.addObject(new Sphere(new Point(1, 0, -25), 4, red, metal));
 scene.addObject(new Sphere(new Point(0, 1, -20), 4, white, glass));*/
 
 console.log(scene.toString());
+function buttonClick() {
+	var element = document.getElementById("canvas1");
+	var height = document.getElementById('view-port-height').value
+	var width = document.getElementById('view-port-width').value
+	scene.lights[0].intensity = logFalloffIntensity(parseInt(document.getElementById('light-1-intensity').value))
+	scene.lights[1].intensity = logFalloffIntensity(parseInt(document.getElementById('light-2-intensity').value))
+	scene.lights[2].intensity = logFalloffIntensity(parseInt(document.getElementById('light-3-intensity').value))
+	scene.lights[3].intensity = logFalloffIntensity(parseInt(document.getElementById('light-4-intensity').value))
+	element.height = parseInt(height);
+	element.width = parseInt(width);
+	ttl = parseInt(document.getElementById('max-depth').value);
+	time = doTrace(element, ttl, 0);
+	document.getElementById('time-taken').innerHTML = time + 'ms'
+}
 
-var element = document.getElementById("canvas1");
-var c = element.getContext("2d");
+function transformSpheres(material) {
+	for(i in scene.objects){
+		o = scene.objects[i]
+		if(o instanceof Sphere) {
+			o.material = material;
+		}
+	}
+	buttonClick()
+}
 
-// read the width and height of the canvas
-var width = element.width;
-var height = element.height;
-
-// create a new batch of pixels with the same
-// dimensions as the image:
-var imageData = c.createImageData(width, height);
-
-rayTrace(scene, imageData);
-
-// copy the image data back onto the canvas
-c.putImageData(imageData, 0, 0); // at coords 0,0
+function whiten() {
+	for(i in scene.objects){
+		o = scene.objects[i]
+		if(o instanceof Sphere) {
+			o.color = colorFn(white);
+		}
+		if(o instanceof Plane) {
+			o.color = checkers;
+		}
+	}
+	buttonClick()
+}
+function greyen() {
+	for(i in scene.objects){
+		o = scene.objects[i]
+		if(o instanceof Sphere) {
+			o.color = colorFn(grey);
+		}
+		if(o instanceof Plane) {
+			o.color = colorFn(grey);
+		}
+	}
+	buttonClick()
+}
 
 			
 	</script>
